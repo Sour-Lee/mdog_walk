@@ -1,0 +1,22 @@
+[Unit]
+Description=Robot Operating System core RPC driver [system-wide]
+Documentation=http://wiki.ros.org/
+After=syslog.target network.target time-sync.target network-online.target
+Wants=network-online.target 
+
+[Service]
+Type=simple
+Restart=on-failure
+User=mdog
+Group=mdog
+Environment=ROS_MASTER_URI=http://localhost:11311
+#Runtime
+ExecStart=/bin/bash -c 'source /opt/ros/melodic/setup.bash; source /home/mdog/catkin_ws/devel/setup.bash; roscore'
+
+#Accounting
+CPUAccounting=true
+CPUQuota=100%
+MemorySwapMax=0
+
+[Install]
+WantedBy=multi-user.target

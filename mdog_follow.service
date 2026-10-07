@@ -1,0 +1,27 @@
+[Unit]
+Description=Robot Operating System Autobahn Websocket server [system-wide]
+Documentation=http://wiki.ros.org/
+After=roscore.service
+Requires=roscore.service
+
+[Service]
+Environment=ROS_MASTER_URI=http://localhost:11311
+Type=simple
+Restart=on-failure
+User=mdog
+Group=mdog
+
+#Runtime
+ExecStart=/bin/bash -c 'source /opt/ros/melodic/setup.bash; source /home/mdog/catkin_ws/devel/setup.bash; roslaunch <pkg> <exec>'
+RestartSec=2s
+KillSignal=SIGINT
+TimeoutStopSec=5s
+
+#Accounting
+MemoryAccounting=true
+MemoryHigh=1024M
+MemorySMax=2048M
+MemorySwapMax=0
+
+[Install]
+WantedBy=multi-user.target

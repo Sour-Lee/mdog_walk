@@ -1,0 +1,32 @@
+# Python
+**/__pycache__/
+*.py[cod]
+*$py.class
+**/.venv/
+**/venv/
+
+# C++
+*.o
+*.obj
+*.out
+*.so
+*.dylib
+*.a
+*.lib
+**/bin/
+
+# ROS bag
+*.bag.active
+*.log
+
+# IDE & Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.bak
+
+# System
+**/.DS_Store
+**/Thumbs.db
