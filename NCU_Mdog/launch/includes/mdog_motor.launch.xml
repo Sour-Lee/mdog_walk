@@ -1,7 +1,0 @@
-<?xml version="1.0"?>
-
-<launch>
-    <node name="servo_control" pkg="ncu_mdog" type="servos_control.py" output="screen">
-        <rosparam command="load" file="$(find ncu_mdog)/config/servo_config.yaml" />
-    </node>
-</launch>

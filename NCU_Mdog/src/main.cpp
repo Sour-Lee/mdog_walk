@@ -19,23 +19,28 @@
 */
 
 // %Tag(FULLTEXT)%
-#include "ros/ros.h"
-#include "std_msgs/String.h"
-#include "sensor_msgs/Imu.h"
-#include "sensor_msgs/MagneticField.h"
-#include "sensor_msgs/LaserScan.h"
-#include "visualization_msgs/Marker.h"
+#include <chrono>
+#include <cmath>
+#include <memory>
+
+#include "rclcpp/rclcpp.hpp"
+#include "std_msgs/msg/string.hpp"
+#include "sensor_msgs/msg/imu.hpp"
+#include "sensor_msgs/msg/magnetic_field.hpp"
+#include "sensor_msgs/msg/laser_scan.hpp"
+#include "visualization_msgs/msg/marker.hpp"
 #define RAD2DEG(x) ((x)*180./M_PI)
 
-void marker_callback(const ros::TimerEvent&);
+void marker_callback();
 void init_marker(void);
 
-visualization_msgs::Marker marker;
-uint32_t shape = visualization_msgs::Marker::CYLINDER;
-ros::Publisher marker_pub;
+visualization_msgs::msg::Marker marker;
+uint32_t shape = visualization_msgs::msg::Marker::CYLINDER;
+rclcpp::Node::SharedPtr node;
+rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr marker_pub;
 int counter=0;
 
-void marker_callback(const ros::TimerEvent&)
+void marker_callback()
 {// update maker location and publish it. 
     float x=1*cos(0.174*counter);
     float y=1*sin(0.174*counter);
@@ -47,13 +52,13 @@ void marker_callback(const ros::TimerEvent&)
     marker_pub.publish(marker);
 }
 
-void timer_callback1(const ros::TimerEvent&)
+void timer_callback1()
 {
     //printf( "Pass %f second\n\n", 1.0f);
 }
 
 
-void scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
+void scanCallback(const sensor_msgs::msg::LaserScan::ConstSharedPtr scan)
 {
     int count = scan->scan_time / scan->time_increment;
     //printf("[YDLIDAR INFO]: I heard a laser scan %s[%d]:\n", scan->header.frame_id.c_str(), count);
@@ -70,14 +75,14 @@ void scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
     
 }
 
-void imuCallback( const sensor_msgs::Imu::ConstPtr &imu_msg ) {
+void imuCallback( const sensor_msgs::msg::Imu::ConstSharedPtr imu_msg ) {
     //ROS_INFO( "Sucess subscribe to imu_publisher" );
     //ROS_INFO( "Imu Orientation : x[%f], y: [%f], z: [%f], w: [%f]", imu_msg->orientation.x, imu_msg->orientation.y, imu_msg->orientation.z, imu_msg->orientation.w );
     //ROS_INFO( "IMU Angilar velocity : x[%f], y[%f], z[%f]", imu_msg->angular_velocity.x, imu_msg->angular_velocity.y, imu_msg->angular_velocity.z );
     //ROS_INFO( "IMU Linear acceleration : x[%f], y[%f], z[%f]\n", imu_msg->linear_acceleration.x, imu_msg->linear_acceleration.y, imu_msg->linear_acceleration.z );
 }
 
-void magCallback( const sensor_msgs::MagneticField::ConstPtr &mag_msg ) {
+void magCallback( const sensor_msgs::msg::MagneticField::ConstSharedPtr mag_msg ) {
    // ROS_INFO( "Sucess subscribe to mag_publisher" );
    // ROS_INFO( "MagneticField: x[%f], y[%f], z[%f]\n", mag_msg->magnetic_field.x, mag_msg->magnetic_field.y, mag_msg->magnetic_field.z );
 }
@@ -85,30 +90,29 @@ void magCallback( const sensor_msgs::MagneticField::ConstPtr &mag_msg ) {
 
 int main(int argc, char **argv)
 {
-  ros::init(argc, argv, "listener");
+    rclcpp::init(argc, argv);
+    node = std::make_shared<rclcpp::Node>("listener");
 
+    //rclcpp::Rate r(1);
 
-  ros::NodeHandle n;
-  //ros::Rate r(1); 
-
-  ros::Subscriber sub_lidar = n.subscribe<sensor_msgs::LaserScan>("/scan", 400, scanCallback);
-  ros::Subscriber sub_imu = n.subscribe<sensor_msgs::Imu>("/imu", 1000, imuCallback);
-  ros::Subscriber sub_mag = n.subscribe<sensor_msgs::MagneticField>("/mag", 1000, magCallback);
+    auto sub_lidar = node->create_subscription<sensor_msgs::msg::LaserScan>("/scan", 400, scanCallback);
+    auto sub_imu = node->create_subscription<sensor_msgs::msg::Imu>("/imu", 1000, imuCallback);
+    auto sub_mag = node->create_subscription<sensor_msgs::msg::MagneticField>("/mag", 1000, magCallback);
   // create a timer callback
-  ros::Timer timer1 = n.createTimer(ros::Duration(1), timer_callback1);
+    auto timer1 = node->create_wall_timer(std::chrono::seconds(1), timer_callback1);
   // create a topic "visualization_marker"
-  ros::Timer timer_marker = n.createTimer(ros::Duration(0.1), marker_callback);
-  marker_pub = n.advertise<visualization_msgs::Marker>("visualization_marker", 1);
+    auto timer_marker = node->create_wall_timer(std::chrono::milliseconds(100), marker_callback);
+    marker_pub = node->create_publisher<visualization_msgs::msg::Marker>("visualization_marker", 1);
 
   init_marker();
 
   /**
-   * ros::spin() will enter a loop, pumping callbacks.  With this version, all
-   * callbacks will be called from within this thread (the main one).  ros::spin()
+    * rclcpp::spin() will enter a loop, pumping callbacks.  With this version, all
+    * callbacks will be called from within this thread (the main one).  rclcpp::spin()
    * will exit when Ctrl-C is pressed, or the node is shutdown by the master.
    */
 
-  ros::spin();
+    rclcpp::spin(node);
 
 
   return 0;
@@ -119,7 +123,7 @@ void init_marker(void)
     // Initialize maker's setting.
     // Set the frame ID and timestamp.  See the TF tutorials for information on these.
     marker.header.frame_id = "/target";
-    marker.header.stamp = ros::Time::now();
+    marker.header.stamp = node->now().to_msg();
 
     // Set the namespace and id for this marker.  This serves to create a unique ID
     // Any marker sent with the same namespace and id will overwrite the old one
@@ -130,7 +134,7 @@ void init_marker(void)
 
     // Set the marker action.  Options are ADD, DELETE, and new in ROS Indigo: 3 (DELETEALL)
     // Tag(ACTION)
-    marker.action = visualization_msgs::Marker::ADD;
+    marker.action = visualization_msgs::msg::Marker::ADD;
 
     // Set the pose of the marker.  This is a full 6DOF pose relative to the frame/time specified in the header
     //Tag(POSE)
@@ -154,6 +158,6 @@ void init_marker(void)
     marker.color.a = 1.0;
 
     //Tag(LIFETIME)
-    marker.lifetime = ros::Duration();
+    marker.lifetime = rclcpp::Duration::from_seconds(0.0).to_builtin_msg();
 
 }

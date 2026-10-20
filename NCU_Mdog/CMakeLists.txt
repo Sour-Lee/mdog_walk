@@ -1,116 +1,70 @@
-cmake_minimum_required(VERSION 3.0.2)
+cmake_minimum_required(VERSION 3.8)
 project(ncu_mdog)
 
-## Compile as C++11, supported in ROS Kinetic and newer
-# add_compile_options(-std=c++11)
+# Compile the ROS 2 nodes and the bundled YDLIDAR SDK with C++14.
+if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 14)
+endif()
 
-## Find catkin macros and libraries
-## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
-## is used, also find other catkin packages
-find_package(catkin COMPONENTS
-  geometry_msgs
-  sensor_msgs
-  message_generation
-  roscpp
-  rospy
-  std_msgs
-  tf
-  visualization_msgs
+find_package(ament_cmake REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(sensor_msgs REQUIRED)
+find_package(std_msgs REQUIRED)
+find_package(visualization_msgs REQUIRED)
+find_package(Threads REQUIRED)
+
+# RTIMULib is installed separately and is required by the MPU9250 driver.
+find_library(RTIMULIB_LIBRARY NAMES RTIMULib)
+if(NOT RTIMULIB_LIBRARY)
+  message(FATAL_ERROR "RTIMULib was not found. Install RTIMULib before building ncu_mdog.")
+endif()
+
+# Build the bundled Unix serial and timer implementation for the YDLIDAR SDK.
+file(GLOB YDLIDAR_SDK_SOURCES
+  "${PROJECT_SOURCE_DIR}/sdk/src/impl/unix/*.cpp"
+  "${PROJECT_SOURCE_DIR}/sdk/src/*.cpp"
+  "${PROJECT_SOURCE_DIR}/sdk/src/*.c"
 )
 
-add_message_files(
-  FILES
-  servos_angle.msg
-  Servo.msg
-  ServoArray.msg
-)
-
-generate_messages(
-  DEPENDENCIES
-  std_msgs
-)
-
-set(SDK_PATH "./sdk/")
-
-FILE(GLOB SDK_SRC 
-  "${SDK_PATH}/src/impl/unix/*.cpp"
-  "${SDK_PATH}/src/*.cpp"
-  "${SDK_PATH}/src/*.c"
-)
-
-catkin_package(
-  CATKIN_DEPENDS 
-  message_runtime 
-  roscpp
-  rospy
-  std_msgs 
-  sensor_msgs 
-  geometry_msgs 
-  tf 
-  visualization_msgs    
-)
-
-###########
-## Build ##
-###########
-
-## Specify additional locations of header files
-## Your package locations should be listed before other locations
-include_directories(
-  ${catkin_INCLUDE_DIRS}
-  ${PROJECT_SOURCE_DIR}/src
+add_library(ncu_mdog_ydlidar_sdk ${YDLIDAR_SDK_SOURCES})
+target_include_directories(ncu_mdog_ydlidar_sdk PUBLIC
   ${PROJECT_SOURCE_DIR}/sdk/include
   ${PROJECT_SOURCE_DIR}/sdk/src
 )
+target_link_libraries(ncu_mdog_ydlidar_sdk Threads::Threads rt)
 
-## Declare a C++ library
-# add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/project_sample.cpp
-# )
+# Build the hardware drivers and their sample subscriber nodes.
+add_executable(ydlidar_node src/driver_src/ydlidar_node.cpp)
+target_include_directories(ydlidar_node PRIVATE ${PROJECT_SOURCE_DIR}/sdk/include)
+target_link_libraries(ydlidar_node ncu_mdog_ydlidar_sdk)
+ament_target_dependencies(ydlidar_node rclcpp sensor_msgs)
 
-## Add cmake target dependencies of the library
-## as an example, code may need to be generated before libraries
-## either from message generation or dynamic reconfigure
-# add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-
-## Declare a C++ executable
-## With catkin_make all packages are built within a single CMake context
-## The recommended prefix ensures that target names across packages don't collide
-# add_executable(${PROJECT_NAME}_node src/project_sample_node.cpp)
-add_executable(ydlidar_node src/driver_src/ydlidar_node.cpp  ${SDK_SRC})
 add_executable(ydlidar_client src/driver_src/ydlidar_client.cpp)
-target_link_libraries(ydlidar_node
-   ${catkin_LIBRARIES} 
- )
-target_link_libraries(ydlidar_client
-   ${catkin_LIBRARIES} 
- )
+ament_target_dependencies(ydlidar_client rclcpp sensor_msgs)
 
 add_executable(main src/main.cpp)
-target_link_libraries(main ${catkin_LIBRARIES})
+ament_target_dependencies(main rclcpp sensor_msgs std_msgs visualization_msgs)
 
 add_executable(mpu9250_node src/driver_src/mpu9250_node.cpp)
-target_link_libraries(
-  mpu9250_node
-  ${catkin_LIBRARIES}
-  RTIMULib
-)
+target_link_libraries(mpu9250_node ${RTIMULIB_LIBRARY})
+ament_target_dependencies(mpu9250_node rclcpp sensor_msgs)
 
 add_executable(mpu9250_client src/driver_src/mpu9250_client.cpp)
-target_link_libraries(
+ament_target_dependencies(mpu9250_client rclcpp sensor_msgs)
+
+# Install node executables for ros2 run and the Python launch descriptions.
+install(TARGETS
+  ydlidar_node
+  ydlidar_client
+  main
+  mpu9250_node
   mpu9250_client
-  ${catkin_LIBRARIES}
-  RTIMULib
+  DESTINATION lib/${PROJECT_NAME}
 )
 
-install(TARGETS ydlidar_node ydlidar_client
-  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-)
+# Install launch files, RViz settings, SDK sources, and hardware setup scripts.
+install(PROGRAMS script/main.py DESTINATION lib/${PROJECT_NAME})
+install(DIRECTORY launch rviz startup sdk DESTINATION share/${PROJECT_NAME})
+install(FILES RTIMULib.ini DESTINATION share/${PROJECT_NAME})
 
-
-install(DIRECTORY launch startup sdk
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
-  USE_SOURCE_PERMISSIONS
-)
+ament_package()

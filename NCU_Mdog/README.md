@@ -18,7 +18,7 @@ This is the drivers and sample code of ncu_mdog.
 
 + jetson nano 4GB
 + Ubuntu 18.04
-+ Ros melodic
++ ROS 2
 + [RTIMULIB](https://github.com/jetsonhacks/RTIMULib)
 
 <p align="right">(<a href="#top">back to top</a>)</p>
@@ -28,7 +28,7 @@ This is the drivers and sample code of ncu_mdog.
 + apt part
  ```sh
 sudo apt updat
-sudo apt-get install build-essential python3-catkin-tools
+sudo apt-get install build-essential python3-colcon-common-extensions python3-rosdep
 ```
 + cmake part
  ```sh
@@ -51,14 +51,14 @@ pip install pyserial
 
 ### Installation
 
-get to your workspace/src then clone and build the package:
+Place the package in a ROS 2 workspace's `src` directory and build it with its
+workspace dependencies:
 ```sh
-cd ~/catkin_ws/src
-git clone https://github.com/NcuMathRoboticsLab/NCU_Mdog.git
-cd ..
-catkin_make -DPYTHON_EXECUTABLE=/usr/bin/python3
-source devel/setup.sh (source ~/.bashrc)
-roscd ncu_mdog/startup
+cd ~/ros2_ws
+rosdep install --from-paths src --ignore-src -r -y
+colcon build --packages-select ncu_mdog
+source install/setup.bash
+cd "$(ros2 pkg prefix ncu_mdog)/share/ncu_mdog/startup"
 sudo chmod 777 ./*
 sudo sh initenv.sh
 ```
@@ -67,8 +67,11 @@ sudo sh initenv.sh
 ## Usage
 
 ```sh
-roslaunch ncu_mdog project_sample.launch
+ros2 launch ncu_mdog project_sample.launch.py
 ```
+
+The RealSense launch is optional and can be enabled with
+`launch_realsense:=true` when a ROS 2 `realsense2_camera` package is installed.
 
 ## Acknowledgments
 

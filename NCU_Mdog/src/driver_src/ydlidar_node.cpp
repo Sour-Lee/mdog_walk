@@ -7,8 +7,11 @@
  * 
  */
 
-#include "ros/ros.h"
-#include "sensor_msgs/LaserScan.h"
+#include <cstdlib>
+#include <sstream>
+
+#include "rclcpp/rclcpp.hpp"
+#include "sensor_msgs/msg/laser_scan.hpp"
 #include "CYdLidar.h"
 #include <vector>
 #include <iostream>
@@ -17,7 +20,7 @@
 
 using namespace ydlidar;
 
-#define ROSVerision "1.3.9"
+#define ROSVerision "2.0.0"
 
 
 std::vector<float> split(const std::string &s, char delim) {
@@ -40,7 +43,8 @@ int main(int argc, char * argv[]) {
     printf("  |_| |____/|_____|___|____/_/   \\_\\_| \\_\\ \n");
     printf("\n");
     fflush(stdout);
-    ros::init(argc, argv, "ydlidar_node"); 
+    rclcpp::init(argc, argv);
+    auto node = std::make_shared<rclcpp::Node>("ydlidar_node");
 
     std::string port;
     int baudrate=115200;
@@ -49,40 +53,37 @@ int main(int argc, char * argv[]) {
     bool intensities,low_exposure,reversion, resolution_fixed;
     bool auto_reconnect;
     double angle_max,angle_min;
-    result_t op_result;
     int samp_rate;
     std::string list;
     std::vector<float> ignore_array;  
     double max_range, min_range;
     double _frequency;
 
-    ros::NodeHandle nh;
-    ros::Publisher scan_pub = nh.advertise<sensor_msgs::LaserScan>("scan", 1000);
-    ros::NodeHandle nh_private("~");
-    nh_private.param<std::string>("port", port, "/dev/ydlidar"); 
-    nh_private.param<int>("baudrate", baudrate, 115200); 
-    nh_private.param<std::string>("frame_id", frame_id, "laser_frame");
-    nh_private.param<bool>("resolution_fixed", resolution_fixed, "true");
-    nh_private.param<bool>("intensity", intensities, "false");
-    nh_private.param<bool>("low_exposure", low_exposure, "false");
-    nh_private.param<bool>("auto_reconnect", auto_reconnect, "true");
-    nh_private.param<bool>("reversion", reversion, "false");
-    nh_private.param<double>("angle_max", angle_max , 180);
-    nh_private.param<double>("angle_min", angle_min , -180);
-    nh_private.param<int>("samp_rate", samp_rate, 4); 
-    nh_private.param<double>("range_max", max_range , 16.0);
-    nh_private.param<double>("range_min", min_range , 0.08);
-    nh_private.param<double>("frequency", _frequency , 7.0);
-    nh_private.param<std::string>("ignore_array",list,"");
+    auto scan_pub = node->create_publisher<sensor_msgs::msg::LaserScan>("scan", 1000);
+    port = node->declare_parameter<std::string>("port", "/dev/ydlidar");
+    baudrate = node->declare_parameter<int>("baudrate", 115200);
+    frame_id = node->declare_parameter<std::string>("frame_id", "laser_frame");
+    resolution_fixed = node->declare_parameter<bool>("resolution_fixed", true);
+    intensities = node->declare_parameter<bool>("intensity", false);
+    low_exposure = node->declare_parameter<bool>("low_exposure", false);
+    auto_reconnect = node->declare_parameter<bool>("auto_reconnect", true);
+    reversion = node->declare_parameter<bool>("reversion", false);
+    angle_max = node->declare_parameter<double>("angle_max", 180.0);
+    angle_min = node->declare_parameter<double>("angle_min", -180.0);
+    samp_rate = node->declare_parameter<int>("samp_rate", 4);
+    max_range = node->declare_parameter<double>("range_max", 16.0);
+    min_range = node->declare_parameter<double>("range_min", 0.08);
+    _frequency = node->declare_parameter<double>("frequency", 7.0);
+    list = node->declare_parameter<std::string>("ignore_array", "");
 
     ignore_array = split(list ,',');
     if(ignore_array.size()%2){
-        ROS_ERROR_STREAM("ignore array is odd need be even");
+        RCLCPP_ERROR(node->get_logger(), "ignore array is odd need be even");
     }
 
     for(uint16_t i =0 ; i < ignore_array.size();i++){
-        if(ignore_array[i] < -180 && ignore_array[i] > 180){
-            ROS_ERROR_STREAM("ignore array should be between -180 and 180");
+        if(ignore_array[i] < -180 || ignore_array[i] > 180){
+            RCLCPP_ERROR(node->get_logger(), "ignore array should be between -180 and 180");
         }
     }
 
@@ -116,17 +117,14 @@ int main(int argc, char * argv[]) {
     laser.setIgnoreArray(ignore_array);
     laser.initialize();
 
-    ros::Rate rate(30);
+    rclcpp::Rate rate(30.0);
 
-    while (ros::ok()) {
+    while (rclcpp::ok()) {
         bool hardError;
         LaserScan scan;//原始激光数据
         if(laser.doProcessSimple(scan, hardError )){
-            sensor_msgs::LaserScan scan_msg;
-            ros::Time start_scan_time;
-            start_scan_time.sec = scan.system_time_stamp/1000000000ul;
-            start_scan_time.nsec = scan.system_time_stamp%1000000000ul;
-            scan_msg.header.stamp = start_scan_time;
+            sensor_msgs::msg::LaserScan scan_msg;
+            scan_msg.header.stamp = rclcpp::Time(static_cast<int64_t>(scan.system_time_stamp)).to_msg();
             scan_msg.header.frame_id = frame_id;
             scan_msg.angle_min = scan.config.min_angle;
             scan_msg.angle_max = scan.config.max_angle;
@@ -138,14 +136,15 @@ int main(int argc, char * argv[]) {
             
             scan_msg.ranges = scan.ranges;
             scan_msg.intensities =  scan.intensities;
-            scan_pub.publish(scan_msg);
+            scan_pub->publish(scan_msg);
         }  
         rate.sleep();
-        ros::spinOnce();
+        rclcpp::spin_some(node);
     }
 
     laser.turnOff();
     printf("[YDLIDAR INFO] Now YDLIDAR is stopping .......\n");
     laser.disconnecting();
+    rclcpp::shutdown();
     return 0;
 }

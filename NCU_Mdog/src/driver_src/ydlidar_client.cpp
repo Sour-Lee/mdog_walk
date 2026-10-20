@@ -7,12 +7,13 @@
  * 
  */
 
-#include "ros/ros.h"
-#include "sensor_msgs/LaserScan.h"
+#include "rclcpp/rclcpp.hpp"
+#include "sensor_msgs/msg/laser_scan.hpp"
+#include <cmath>
 
 #define RAD2DEG(x) ((x)*180./M_PI)
 
-void scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
+void scanCallback(const sensor_msgs::msg::LaserScan::ConstSharedPtr scan)
 {
     int count = scan->scan_time / scan->time_increment;
     printf("[YDLIDAR INFO]: I heard a laser scan %s[%d]:\n", scan->header.frame_id.c_str(), count);
@@ -27,10 +28,11 @@ void scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
 
 int main(int argc, char **argv)
 {
-    ros::init(argc, argv, "ydlidar_client");
-    ros::NodeHandle n;
-    ros::Subscriber sub = n.subscribe<sensor_msgs::LaserScan>("/scan", 1000, scanCallback);
-    ros::spin();
+    rclcpp::init(argc, argv);
+    auto node = std::make_shared<rclcpp::Node>("ydlidar_client");
+    auto sub = node->create_subscription<sensor_msgs::msg::LaserScan>("/scan", 1000, scanCallback);
+    rclcpp::spin(node);
+    rclcpp::shutdown();
 
     return 0;
 }
