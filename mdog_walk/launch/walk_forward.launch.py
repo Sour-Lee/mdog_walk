@@ -14,7 +14,7 @@ def generate_launch_description():
             IncludeLaunchDescription(PythonLaunchDescriptionSource(servo_launch)),
             Node(
                 package="mdog_walk",
-                executable="walk_forward.py",
+                executable="walk_forward",
                 name="walk_forward",
                 output="screen",
             ),

@@ -2,16 +2,15 @@
 <package format="3">
   <name>mdog_walk</name>
   <version>0.1.0</version>
-  <description>ROS 2 package for Mdog servo control and walking.</description>
+  <description>ROS 2 Python nodes for Mdog servo control and walking.</description>
   <maintainer email="mdog@todo.todo">mdog</maintainer>
   <license>TODO</license>
 
-  <buildtool_depend>ament_cmake</buildtool_depend>
-  <build_depend>rosidl_default_generators</build_depend>
+  <buildtool_depend>ament_python</buildtool_depend>
 
-  <depend>geometry_msgs</depend>
   <depend>rclpy</depend>
   <depend>std_msgs</depend>
+  <depend>mdog_walk_interfaces</depend>
 
   <exec_depend>ament_index_python</exec_depend>
   <exec_depend>launch</exec_depend>
@@ -19,11 +18,7 @@
   <exec_depend>ros2launch</exec_depend>
   <exec_depend>python3-numpy</exec_depend>
   <exec_depend>python3-serial</exec_depend>
-  <exec_depend>rosidl_default_runtime</exec_depend>
-
-  <member_of_group>rosidl_interface_packages</member_of_group>
-
   <export>
-    <build_type>ament_cmake</build_type>
+    <build_type>ament_python</build_type>
   </export>
 </package>

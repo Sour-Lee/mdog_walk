@@ -14,7 +14,7 @@ def generate_launch_description():
             IncludeLaunchDescription(PythonLaunchDescriptionSource(servo_launch)),
             Node(
                 package="mdog_walk",
-                executable="mdog_teleop.py",
+                executable="mdog_teleop",
                 name="mdog_teleop",
                 output="screen",
             ),

@@ -12,7 +12,7 @@ def generate_launch_description():
         [
             Node(
                 package="mdog_walk",
-                executable="servos_control.py",
+                executable="servos_control",
                 name="servos_control",
                 output="screen",
                 parameters=[config],
