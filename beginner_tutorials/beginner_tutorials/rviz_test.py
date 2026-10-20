@@ -1,20 +1,21 @@
 #!/usr/bin/env python
 
-import rospy
+import rclpy
+from rclpy.node import Node
 import numpy as np
 from sensor_msgs.msg import LaserScan
 from visualization_msgs.msg import Marker
 
 
 marker = Marker()
-marker_pub = rospy.Publisher("/visualization_marker", Marker, queue_size = 2)
+node = None
 count = 0
 
 
 def init_maker() : 
 
     marker.header.frame_id = "/laser_link"
-    marker.header.stamp = rospy.Time.now()
+    marker.header.stamp = node.get_clock().now().to_msg()
 
     global count
     x=1*np.cos(0.174*count);
@@ -44,8 +45,9 @@ def init_maker() :
     marker.pose.orientation.z = 0.0
     marker.pose.orientation.w = 1.0
 
-    marker_pub.publish(marker)
-    marker.lifetime = rospy.Duration(0.1)
+    marker.lifetime.sec = 0
+    marker.lifetime.nanosec = 100000000
+    node.marker_pub.publish(marker)
 
 
 
@@ -76,7 +78,7 @@ def laserCallback(data):
             y1=float(format(data.ranges[i]*np.sin(data.angle_min+data.angle_increment*i),'.5f'))
             file.write(str(x1)+"  "+str(y1)+"\n")
     '''
-    rospy.loginfo("I heard laser scan %s", data.header.seq)
+    node.get_logger().info("I heard laser scan")
     global count
     count += 1 
     print(count)
@@ -84,16 +86,34 @@ def laserCallback(data):
 
     init_maker()
 
-    if count == 3600 :
-        rospy.signal_shutdown(count)
+    if count == 3600:
+        rclpy.shutdown()
 
-    
 
-if __name__ == '__main__':
-    rospy.init_node('listener', anonymous=True)
-    rospy.Subscriber("/scan", LaserScan, laserCallback)
-    r = rospy.Rate(10)
-    rospy.spin()
+class RvizTest(Node):
+    def __init__(self):
+        super().__init__("rviz_test")
+        self.marker_pub = self.create_publisher(Marker, "/visualization_marker", 2)
+        self.subscription = self.create_subscription(LaserScan, "/scan", laserCallback, 10)
+
+
+def main(args=None):
+    global node
+    rclpy.init(args=args)
+    node = RvizTest()
+    try:
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        node.destroy_node()
+        node = None
+        if rclpy.ok():
+            rclpy.shutdown()
+
+
+if __name__ == "__main__":
+    main()
 
 
 

@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 
-import rospy
+import rclpy
+from rclpy.node import Node
 import numpy as np
 from sensor_msgs.msg import LaserScan
 
 count = 0
+node = None
 
 def laserCallback(data):
     ''' 
@@ -24,7 +26,7 @@ def laserCallback(data):
     x_y_data=np.vstack((x,y)).T
     '''
 
-    #rospy.loginfo("I heard laser scan %s", data.header.seq)
+    # node.get_logger().info("I heard laser scan")
  
     global count
     count += 1 
@@ -38,9 +40,29 @@ def laserCallback(data):
             file.write(str(x1)+"  "+str(y1)+"\n")
 
     if count == 360 :
-        rospy.signal_shutdown(count)
+        rclpy.shutdown()
 
-if __name__ == '__main__':
-    rospy.init_node('listener', anonymous=True)
-    rospy.Subscriber("/scan", LaserScan, laserCallback)
-    rospy.spin()
+
+class LaserListener(Node):
+    def __init__(self):
+        super().__init__("laser_listener")
+        self.subscription = self.create_subscription(LaserScan, "/scan", laserCallback, 10)
+
+
+def main(args=None):
+    global node
+    rclpy.init(args=args)
+    node = LaserListener()
+    try:
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        node.destroy_node()
+        node = None
+        if rclpy.ok():
+            rclpy.shutdown()
+
+
+if __name__ == "__main__":
+    main()

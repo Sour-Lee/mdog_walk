@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
-import rospy
+import rclpy
+from rclpy.node import Node
 import numpy as np
 from numpy import linalg as npla
 from numpy.linalg import inv
@@ -9,7 +10,7 @@ from visualization_msgs.msg import Marker
 from std_msgs.msg import Float64MultiArray
 
 marker = Marker()
-marker_pub = rospy.Publisher("/visualization_marker", Marker, queue_size = 2)
+node = None
 
 ############################# golbal variables #############################
 counter = 0 # golbal
@@ -25,7 +26,7 @@ cov_c = R #golbal
 def init_maker() : 
 
     marker.header.frame_id = "/laser_link"
-    marker.header.stamp = rospy.Time.now()
+    marker.header.stamp = node.get_clock().now().to_msg()
 
     global position
     if position.size > 0 :
@@ -59,8 +60,9 @@ def init_maker() :
     marker.pose.orientation.z = 0.0
     marker.pose.orientation.w = 1.0
 
-    marker_pub.publish(marker)
-    marker.lifetime = rospy.Duration(0.1)
+    marker.lifetime.sec = 0
+    marker.lifetime.nanosec = 100000000
+    node.marker_pub.publish(marker)
 ############################# rviz #############################
 
 
@@ -450,15 +452,15 @@ def laserCallback(data):
     print("===============================================================")
     
     if counter == 3600 :
-        rospy.signal_shutdown(counter)
+        rclpy.shutdown()
 
     ################## Publisher #################
-    publisher()
+    if rclpy.ok():
+        publisher()
 
 
 def publisher():
     global position
-    msg_pub = rospy.Publisher("/direction_msg", Float64MultiArray, queue_size = 10)
     if position.size > 0 :
         x=position[0]
         y=position[2]
@@ -466,12 +468,32 @@ def publisher():
         x = 0
         y = 0
     msg = Float64MultiArray()  # the data to be sent, initialise the array
-    msg.data = np.array([x,y]) # assign the array with the value you want to send
-    msg_pub.publish(msg)
+    msg.data = [float(x), float(y)] # assign the array with the value you want to send
+    node.direction_pub.publish(msg)
 
 
-if __name__ == '__main__':
-    rospy.init_node('listener', anonymous=True)
-    rospy.Subscriber("/scan", LaserScan, laserCallback)
-    r = rospy.Rate(10)
-    rospy.spin()
+class LaserTracker(Node):
+    def __init__(self):
+        super().__init__("laser_tracker")
+        self.marker_pub = self.create_publisher(Marker, "/visualization_marker", 2)
+        self.direction_pub = self.create_publisher(Float64MultiArray, "/direction_msg", 10)
+        self.subscription = self.create_subscription(LaserScan, "/scan", laserCallback, 10)
+
+
+def main(args=None):
+    global node
+    rclpy.init(args=args)
+    node = LaserTracker()
+    try:
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        node.destroy_node()
+        node = None
+        if rclpy.ok():
+            rclpy.shutdown()
+
+
+if __name__ == "__main__":
+    main()
