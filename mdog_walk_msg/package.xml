@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="3">
-  <name>mdog_walk_interfaces</name>
+  <name>mdog_walk_msg</name>
   <version>0.1.0</version>
   <description>Custom ROS 2 interfaces for the Mdog walking system.</description>
   <maintainer email="mdog@todo.todo">mdog</maintainer>

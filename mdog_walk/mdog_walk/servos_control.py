@@ -3,7 +3,7 @@ import numpy as np
 import rclpy
 from rclpy.node import Node
 
-from mdog_walk_interfaces.msg import Servo, ServoAngle, ServoArray
+from mdog_walk_msg.msg import Servo, ServoAngle, ServoArray
 from .uart_servo_controller import UART_Servo_Controller
 
 

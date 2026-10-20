@@ -8,7 +8,7 @@ import tty
 import rclpy
 from rclpy.node import Node
 
-from mdog_walk_interfaces.msg import ServoAngle
+from mdog_walk_msg.msg import ServoAngle
 from .foot_pose import (
     foot_raise,
     foot_raise_back,

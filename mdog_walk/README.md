@@ -1,7 +1,7 @@
 # mdog_walk
 
 ROS 2 Python nodes for the Mdog walking and servo-control system. Custom
-interfaces are provided by the sibling `mdog_walk_interfaces` package.
+interfaces are provided by the sibling `mdog_walk_msg` package.
 
 ## Build
 

@@ -2,7 +2,7 @@
 <package format="3">
   <name>mdog_walk</name>
   <version>0.1.0</version>
-  <description>ROS 2 Python nodes for Mdog servo control and walking.</description>
+  <description>ROS 2 Python nodes for Mdog walking.</description>
   <maintainer email="mdog@todo.todo">mdog</maintainer>
   <license>TODO</license>
 
@@ -10,7 +10,7 @@
 
   <depend>rclpy</depend>
   <depend>std_msgs</depend>
-  <depend>mdog_walk_interfaces</depend>
+  <depend>mdog_walk_msg</depend>
 
   <exec_depend>ament_index_python</exec_depend>
   <exec_depend>launch</exec_depend>

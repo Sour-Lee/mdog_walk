@@ -1,1 +1,0 @@
-mdog_walk_interfaces/Servo[] servos

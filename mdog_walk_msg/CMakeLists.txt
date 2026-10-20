@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(mdog_walk_interfaces)
+project(mdog_walk_msg)
 
 find_package(ament_cmake REQUIRED)
 find_package(geometry_msgs REQUIRED)
